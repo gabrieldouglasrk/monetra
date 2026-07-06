@@ -129,6 +129,20 @@ function renderApp() {
     </section>
   `;
   document.querySelector("#toggle-theme").addEventListener("click", toggleTheme);
+  const accountButton = document.querySelector("#account-button");
+  const accountMenu = document.querySelector("#account-menu");
+  accountButton.addEventListener("click", (event) => {
+    event.stopPropagation();
+    const isOpen = !accountMenu.hidden;
+    accountMenu.hidden = isOpen;
+    accountButton.setAttribute("aria-expanded", String(!isOpen));
+    if (isOpen) return;
+    document.addEventListener("click", () => {
+      accountMenu.hidden = true;
+      accountButton.setAttribute("aria-expanded", "false");
+    }, { once: true });
+  });
+  accountMenu.addEventListener("click", (event) => event.stopPropagation());
   document.querySelector("#logout").addEventListener("click", logout);
   document.querySelector("#mes").addEventListener("change", (event) => {
     state.mes = Number(event.target.value);
@@ -158,7 +172,18 @@ function renderHeader() {
         <div class="header-actions">
           ${currentPage === "financas" ? monthControls() : ""}
           <button class="pill-btn" id="toggle-theme">${state.theme === "dark" ? "Claro" : "Escuro"}</button>
-          <button class="pill-btn" id="logout">Sair</button>
+          <div class="account">
+            <button class="account-button" id="account-button" aria-label="Abrir menu da conta" aria-haspopup="true" aria-expanded="false">
+              ${user.photoURL ? `<img src="${escapeAttr(user.photoURL)}" alt="">` : `<span>${escapeAttr((user.displayName || user.email || "U").charAt(0).toUpperCase())}</span>`}
+            </button>
+            <div class="account-menu" id="account-menu" hidden>
+              <div class="account-user">
+                <strong>${escapeAttr(user.displayName || "Minha conta")}</strong>
+                <small>${escapeAttr(user.email || "")}</small>
+              </div>
+              <button id="logout" class="logout-button">Sair da conta</button>
+            </div>
+          </div>
         </div>
       </div>
     </header>
