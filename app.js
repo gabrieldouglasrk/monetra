@@ -1,8 +1,10 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js";
 import {
   GoogleAuthProvider,
+  createUserWithEmailAndPassword,
   getAuth,
   onAuthStateChanged,
+  signInWithEmailAndPassword,
   signInWithPopup,
   signOut
 } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-auth.js";
@@ -33,7 +35,7 @@ let user = null;
 let currentPage = "financas";
 let saveTimer = null;
 let state = {
-  theme: "light",
+  theme: "dark",
   meta: 30,
   mes: new Date().getMonth(),
   ano: "2026",
@@ -85,17 +87,71 @@ function renderLogin() {
   document.body.classList.toggle("dark", state.theme === "dark");
   root.innerHTML = `
     <section class="login">
+      <div class="login-brand">
+        <span class="login-logo">M</span>
+        <h1>Monetra</h1>
+        <p>Seu dinheiro, suas escolhas, seu futuro.</p>
+      </div>
       <div class="login-card">
-        <h1>Financas</h1>
-        <p class="muted">Entre com Google para salvar seus dados na sua conta.</p>
+        <h2 id="auth-title">Bem-vindo de volta</h2>
+        <p class="muted" id="auth-subtitle">Entre para acessar sua conta.</p>
         ${firebaseReady ? "" : `<p class="badge badge-red">Configure o Firebase em app.js antes de publicar.</p>`}
-        <button class="google-btn" id="login-google">Entrar com Google</button>
-        <button class="ghost-btn" id="toggle-theme">${state.theme === "dark" ? "Usar tema claro" : "Usar tema escuro"}</button>
+        <form id="email-auth-form">
+          <label class="login-label" for="auth-email">E-mail</label>
+          <input class="login-input" id="auth-email" type="email" autocomplete="email" placeholder="voce@email.com" required>
+          <label class="login-label" for="auth-password">Senha</label>
+          <input class="login-input" id="auth-password" type="password" autocomplete="current-password" placeholder="Sua senha" minlength="6" required>
+          <p class="login-error" id="login-error" role="alert"></p>
+          <button class="login-primary" id="email-submit" type="submit">Entrar</button>
+        </form>
+        <div class="login-divider"><span>ou continue com</span></div>
+        <button class="google-btn" id="login-google" type="button"><span class="google-g">G</span> Google</button>
+        <p class="auth-switch"><span id="auth-switch-text">Ainda não tem uma conta?</span> <button id="toggle-auth-mode" type="button">Criar conta</button></p>
       </div>
     </section>
   `;
   document.querySelector("#login-google").addEventListener("click", login);
-  document.querySelector("#toggle-theme").addEventListener("click", toggleTheme);
+  const form = document.querySelector("#email-auth-form");
+  const password = document.querySelector("#auth-password");
+  let createMode = false;
+  form.addEventListener("submit", (event) => emailLogin(event, createMode));
+  document.querySelector("#toggle-auth-mode").addEventListener("click", () => {
+    createMode = !createMode;
+    document.querySelector("#auth-title").textContent = createMode ? "Crie sua conta" : "Bem-vindo de volta";
+    document.querySelector("#auth-subtitle").textContent = createMode ? "Comece agora com o Monetra." : "Entre para acessar sua conta.";
+    document.querySelector("#email-submit").textContent = createMode ? "Criar conta" : "Entrar";
+    document.querySelector("#auth-switch-text").textContent = createMode ? "Já possui uma conta?" : "Ainda não tem uma conta?";
+    document.querySelector("#toggle-auth-mode").textContent = createMode ? "Entrar" : "Criar conta";
+    password.autocomplete = createMode ? "new-password" : "current-password";
+    showLoginError("");
+  });
+}
+
+async function emailLogin(event, createMode) {
+  event.preventDefault();
+  if (!firebaseReady) return showLoginError("O Firebase ainda não foi configurado.");
+  const email = document.querySelector("#auth-email").value.trim();
+  const password = document.querySelector("#auth-password").value;
+  try {
+    showLoginError("");
+    if (createMode) await createUserWithEmailAndPassword(auth, email, password);
+    else await signInWithEmailAndPassword(auth, email, password);
+  } catch (error) {
+    console.error("Erro na autenticação por e-mail:", error);
+    const messages = {
+      "auth/invalid-credential": "E-mail ou senha incorretos.",
+      "auth/email-already-in-use": "Este e-mail já possui uma conta.",
+      "auth/invalid-email": "Digite um e-mail válido.",
+      "auth/weak-password": "A senha deve ter pelo menos 6 caracteres.",
+      "auth/too-many-requests": "Muitas tentativas. Aguarde um pouco e tente novamente."
+    };
+    showLoginError(messages[error.code] || "Não foi possível autenticar. Tente novamente.");
+  }
+}
+
+function showLoginError(message) {
+  const element = document.querySelector("#login-error");
+  if (element) element.textContent = message;
 }
 
 async function login() {
@@ -144,7 +200,7 @@ function renderApp() {
       ${renderHeader()}
       <div id="page"></div>
       <nav class="tab-bar">
-        ${tabButton("financas", "$", "Financas")}
+        ${tabButton("financas", "$", "Visão geral")}
         ${tabButton("dividas", "!", "Dividas")}
         ${tabButton("regras", "?", "Regras")}
       </nav>
@@ -192,7 +248,7 @@ function renderHeader() {
     <header class="header">
       <div class="header-top">
         <div>
-          <h1>${currentPage === "financas" ? "Financas" : currentPage === "dividas" ? "Dividas" : "Regras"}</h1>
+          <h1>${currentPage === "financas" ? "Monetra" : currentPage === "dividas" ? "Dividas" : "Regras"}</h1>
           <p class="header-sub">${currentPage === "financas" ? "Planejamento mensal" : currentPage === "dividas" ? "Pendencias e atrasados" : "Seu guia de decisao financeira"}</p>
         </div>
         <div class="header-actions">

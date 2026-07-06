@@ -56,23 +56,119 @@ button {
 .login {
   min-height: 100vh;
   display: grid;
-  place-items: center;
+  grid-template-columns: minmax(280px, 1fr) minmax(360px, 520px);
+  align-items: center;
+  gap: 64px;
   padding: 24px;
+  background: radial-gradient(circle at 20% 20%, #173c32 0, #0b0f14 38%, #080b0f 100%);
 }
 
 .login-card {
-  width: min(420px, 100%);
-  background: var(--card);
-  border: 0.5px solid var(--border);
-  border-radius: var(--radius);
-  padding: 22px;
+  width: min(440px, 100%);
+  justify-self: center;
+  background: rgba(30, 30, 28, 0.94);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  padding: 32px;
+  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.35);
 }
 
-.login-card h1,
+.login-brand {
+  justify-self: center;
+  max-width: 420px;
+  color: #fff;
+}
+
+.login-logo {
+  display: grid;
+  width: 54px;
+  height: 54px;
+  place-items: center;
+  border-radius: 16px;
+  background: var(--green);
+  font-size: 28px;
+  font-weight: 800;
+}
+
+.login-brand h1 {
+  margin: 20px 0 6px;
+  font-size: clamp(42px, 7vw, 72px);
+  letter-spacing: -3px;
+}
+
+.login-brand p {
+  margin: 0;
+  color: #aeb8b4;
+  font-size: 18px;
+}
+
+.login-card h2 {
+  margin: 0 0 6px;
+  color: #f0efe8;
+  font-size: 26px;
+}
+
 .header h1 {
   margin: 0;
   font-size: 28px;
   letter-spacing: -0.3px;
+}
+
+.login-label {
+  display: block;
+  margin: 18px 0 7px;
+  color: #d6d8d5;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.login-input {
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 10px;
+  outline: none;
+  padding: 12px 13px;
+  background: #141817;
+  color: #fff;
+}
+
+.login-input:focus {
+  border-color: var(--green);
+  box-shadow: 0 0 0 3px rgba(29, 158, 117, 0.16);
+}
+
+.login-primary {
+  width: 100%;
+  border: 0;
+  border-radius: 10px;
+  padding: 12px;
+  background: var(--green);
+  color: white;
+  font-weight: 750;
+}
+
+.login-error {
+  min-height: 20px;
+  margin: 8px 0 4px;
+  color: #f09090;
+  font-size: 13px;
+}
+
+.login-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 22px 0;
+  color: #858b88;
+  font-size: 12px;
+}
+
+.login-divider::before,
+.login-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .muted {
@@ -91,8 +187,55 @@ button {
 }
 
 .google-btn {
-  margin-top: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin: 0;
+  background: #f5f5f5;
+  color: #222;
   font-weight: 700;
+}
+
+.google-g {
+  color: #4285f4;
+  font-size: 18px;
+}
+
+.auth-switch {
+  margin: 22px 0 0;
+  color: #929995;
+  text-align: center;
+  font-size: 13px;
+}
+
+.auth-switch button {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: #66caa9;
+  font-weight: 700;
+}
+
+@media (max-width: 760px) {
+  .login {
+    grid-template-columns: 1fr;
+    gap: 28px;
+    padding: 32px 18px;
+  }
+
+  .login-brand {
+    text-align: center;
+  }
+
+  .login-logo {
+    margin: 0 auto;
+  }
+
+  .login-brand h1 {
+    margin-top: 12px;
+    font-size: 42px;
+  }
 }
 
 .ghost-btn,
