@@ -54,22 +54,31 @@ let state = {
 
 const months = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
+// Nunca deixe a página vazia enquanto o Firebase restaura a sessão.
+renderLogin();
+
 if (firebaseReady) {
-  onAuthStateChanged(auth, async (nextUser) => {
-    user = nextUser;
-    if (user) {
-      try {
-        await loadUserData();
-      } catch (error) {
-        console.error("Não foi possível carregar os dados do Firestore:", error);
+  onAuthStateChanged(
+    auth,
+    async (nextUser) => {
+      user = nextUser;
+      if (user) {
+        try {
+          await loadUserData();
+        } catch (error) {
+          console.error("Não foi possível carregar os dados do Firestore:", error);
+        }
+        renderApp();
+      } else {
+        renderLogin();
       }
-      renderApp();
-    } else {
+    },
+    (error) => {
+      console.error("Não foi possível iniciar o Firebase Authentication:", error);
+      user = null;
       renderLogin();
     }
-  });
-} else {
-  renderLogin();
+  );
 }
 
 function renderLogin() {
