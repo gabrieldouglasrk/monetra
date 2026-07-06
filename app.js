@@ -3,9 +3,11 @@ import {
   GoogleAuthProvider,
   createUserWithEmailAndPassword,
   getAuth,
+  getRedirectResult,
   onAuthStateChanged,
   signInWithEmailAndPassword,
   signInWithPopup,
+  signInWithRedirect,
   signOut
 } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-auth.js";
 import {
@@ -83,6 +85,12 @@ const months = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "
 
 // Nunca deixe a página vazia enquanto o Firebase restaura a sessão.
 renderLogin();
+
+// Finaliza o retorno do login por redirecionamento, usado no Firefox.
+getRedirectResult(auth).catch((error) => {
+  console.error("Erro no retorno do login com Google:", error);
+  showLoginError("Não foi possível concluir o login com Google.");
+});
 
 if (firebaseReady) {
   onAuthStateChanged(
@@ -198,6 +206,11 @@ async function login() {
   try {
     button.disabled = true;
     button.innerHTML = "Conectando ao Google...";
+    if (navigator.userAgent.toLowerCase().includes("firefox")) {
+      sessionStorage.setItem("monetra-google-login", "pending");
+      await signInWithRedirect(auth, provider);
+      return;
+    }
     const credential = await signInWithPopup(auth, provider);
     user = credential.user;
     renderApp();
