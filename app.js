@@ -223,8 +223,31 @@ async function login() {
 }
 
 async function logout() {
-  await saveNow();
-  await signOut(auth);
+  const button = document.querySelector("#logout");
+  if (button) {
+    button.disabled = true;
+    button.textContent = "Saindo...";
+  }
+
+  clearTimeout(saveTimer);
+  // O Firestore não pode impedir o usuário de encerrar a sessão.
+  await Promise.race([
+    saveNow(),
+    new Promise((resolve) => setTimeout(resolve, 1200))
+  ]);
+
+  try {
+    await signOut(auth);
+    user = null;
+    renderLogin();
+  } catch (error) {
+    console.error("Não foi possível sair da conta:", error);
+    if (button) {
+      button.disabled = false;
+      button.textContent = "Sair da conta";
+    }
+    alert("Não foi possível sair da conta. Tente novamente.");
+  }
 }
 
 async function loadUserData() {
