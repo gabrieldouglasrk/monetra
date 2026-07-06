@@ -58,7 +58,11 @@ if (firebaseReady) {
   onAuthStateChanged(auth, async (nextUser) => {
     user = nextUser;
     if (user) {
-      await loadUserData();
+      try {
+        await loadUserData();
+      } catch (error) {
+        console.error("Não foi possível carregar os dados do Firestore:", error);
+      }
       renderApp();
     } else {
       renderLogin();
@@ -90,7 +94,12 @@ async function login() {
     alert("Configure o Firebase em app.js para ativar o login Google.");
     return;
   }
-  await signInWithPopup(auth, provider);
+  try {
+    await signInWithPopup(auth, provider);
+  } catch (error) {
+    console.error("Erro no login com Google:", error);
+    alert(`Não foi possível entrar: ${error.code || error.message}`);
+  }
 }
 
 async function logout() {
@@ -112,7 +121,11 @@ function queueSave() {
 
 async function saveNow() {
   if (!firebaseReady || !user) return;
-  await setDoc(doc(db, "users", user.uid), state, { merge: true });
+  try {
+    await setDoc(doc(db, "users", user.uid), state, { merge: true });
+  } catch (error) {
+    console.error("Não foi possível salvar os dados no Firestore:", error);
+  }
 }
 
 function renderApp() {
@@ -144,14 +157,18 @@ function renderApp() {
   });
   accountMenu.addEventListener("click", (event) => event.stopPropagation());
   document.querySelector("#logout").addEventListener("click", logout);
-  document.querySelector("#mes").addEventListener("change", (event) => {
-    state.mes = Number(event.target.value);
-    queueSave();
-  });
-  document.querySelector("#ano").addEventListener("change", (event) => {
-    state.ano = event.target.value;
-    queueSave();
-  });
+  const monthSelect = document.querySelector("#mes");
+  const yearSelect = document.querySelector("#ano");
+  if (monthSelect && yearSelect) {
+    monthSelect.addEventListener("change", (event) => {
+      state.mes = Number(event.target.value);
+      queueSave();
+    });
+    yearSelect.addEventListener("change", (event) => {
+      state.ano = event.target.value;
+      queueSave();
+    });
+  }
   document.querySelectorAll("[data-page]").forEach((button) => {
     button.addEventListener("click", () => {
       currentPage = button.dataset.page;
