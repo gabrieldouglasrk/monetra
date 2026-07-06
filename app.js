@@ -14,12 +14,12 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js";
 
 const firebaseConfig = {
-  apiKey: "COLE_SUA_API_KEY",
-  authDomain: "SEU_PROJETO.firebaseapp.com",
-  projectId: "SEU_PROJETO",
-  storageBucket: "SEU_PROJETO.appspot.com",
-  messagingSenderId: "SEU_SENDER_ID",
-  appId: "SEU_APP_ID"
+  apiKey: "AIzaSyBB3mGeMrqj8-X-lObl7Ij789sQELTN6O4",
+  authDomain: "monetra-8e551.firebaseapp.com",
+  projectId: "monetra-8e551",
+  storageBucket: "monetra-8e551.firebasestorage.app",
+  messagingSenderId: "896339503212",
+  appId: "1:896339503212:web:4a43238fdd5be2bc01d049"
 };
 
 const firebaseReady = !firebaseConfig.apiKey.startsWith("COLE_");
