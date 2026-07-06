@@ -52,7 +52,32 @@ let state = {
     { label: "Gasolina", value: 300 }
   ],
   dividas: [],
+  periodos: {},
 };
+
+function periodKey() {
+  return `${state.ano}-${String(state.mes + 1).padStart(2, "0")}`;
+}
+
+function saveCurrentPeriod() {
+  state.periodos[periodKey()] = {
+    meta: state.meta,
+    entradas: structuredClone(state.entradas),
+    saidas: structuredClone(state.saidas),
+    dividas: structuredClone(state.dividas)
+  };
+}
+
+function loadCurrentPeriod() {
+  const period = state.periodos[periodKey()];
+  state.meta = period?.meta ?? 30;
+  state.entradas = structuredClone(period?.entradas ?? []);
+  state.saidas = structuredClone(period?.saidas ?? []);
+  state.dividas = structuredClone(period?.dividas ?? []);
+}
+
+// Preserva os dados iniciais no mês atual e inicia a estrutura por competência.
+saveCurrentPeriod();
 
 const months = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
@@ -65,12 +90,14 @@ if (firebaseReady) {
     async (nextUser) => {
       user = nextUser;
       if (user) {
+        // Mostra o painel imediatamente; os dados remotos entram assim que chegarem.
+        renderApp();
         try {
           await loadUserData();
+          renderApp();
         } catch (error) {
           console.error("Não foi possível carregar os dados do Firestore:", error);
         }
-        renderApp();
       } else {
         renderLogin();
       }
@@ -132,8 +159,11 @@ async function emailLogin(event, createMode) {
   if (!firebaseReady) return showLoginError("O Firebase ainda não foi configurado.");
   const email = document.querySelector("#auth-email").value.trim();
   const password = document.querySelector("#auth-password").value;
+  const submitButton = document.querySelector("#email-submit");
   try {
     showLoginError("");
+    submitButton.disabled = true;
+    submitButton.textContent = createMode ? "Criando conta..." : "Entrando...";
     if (createMode) await createUserWithEmailAndPassword(auth, email, password);
     else await signInWithEmailAndPassword(auth, email, password);
   } catch (error) {
@@ -146,6 +176,8 @@ async function emailLogin(event, createMode) {
       "auth/too-many-requests": "Muitas tentativas. Aguarde um pouco e tente novamente."
     };
     showLoginError(messages[error.code] || "Não foi possível autenticar. Tente novamente.");
+    submitButton.disabled = false;
+    submitButton.textContent = createMode ? "Criar conta" : "Entrar";
   }
 }
 
@@ -159,11 +191,16 @@ async function login() {
     alert("Configure o Firebase em app.js para ativar o login Google.");
     return;
   }
+  const button = document.querySelector("#login-google");
   try {
+    button.disabled = true;
+    button.innerHTML = "Conectando ao Google...";
     await signInWithPopup(auth, provider);
   } catch (error) {
     console.error("Erro no login com Google:", error);
     alert(`Não foi possível entrar: ${error.code || error.message}`);
+    button.disabled = false;
+    button.innerHTML = '<span class="google-g">G</span> Google';
   }
 }
 
@@ -175,11 +212,18 @@ async function logout() {
 async function loadUserData() {
   const ref = doc(db, "users", user.uid);
   const snap = await getDoc(ref);
-  if (snap.exists()) state = { ...state, ...snap.data() };
+  if (snap.exists()) {
+    const saved = snap.data();
+    state = { ...state, ...saved, periodos: saved.periodos || {} };
+    // Migração automática dos dados antigos, que não eram separados por mês.
+    if (!state.periodos[periodKey()]) saveCurrentPeriod();
+    loadCurrentPeriod();
+  }
   document.body.classList.toggle("dark", state.theme === "dark");
 }
 
 function queueSave() {
+  saveCurrentPeriod();
   clearTimeout(saveTimer);
   saveTimer = setTimeout(saveNow, 450);
 }
@@ -226,12 +270,18 @@ function renderApp() {
   const yearSelect = document.querySelector("#ano");
   if (monthSelect && yearSelect) {
     monthSelect.addEventListener("change", (event) => {
+      saveCurrentPeriod();
       state.mes = Number(event.target.value);
+      loadCurrentPeriod();
       queueSave();
+      renderApp();
     });
     yearSelect.addEventListener("change", (event) => {
+      saveCurrentPeriod();
       state.ano = event.target.value;
+      loadCurrentPeriod();
       queueSave();
+      renderApp();
     });
   }
   document.querySelectorAll("[data-page]").forEach((button) => {
@@ -364,6 +414,7 @@ function fieldSection(title, key, color, addLabel) {
         ${state[key].map((item, index) => `
           <div class="field-row">
             <input class="field-label-input" data-key="${key}" data-index="${index}" data-field="label" value="${escapeAttr(item.label)}" placeholder="Descricao">
+            ${item.parcelada ? `<span class="installment-badge">${item.parcela}/${item.parcelas}</span>` : ""}
             <span class="field-prefix">R$</span>
             <input class="field-value" data-key="${key}" data-index="${index}" data-field="value" type="number" value="${item.value}" min="0" step="0.01" style="color:${color}">
             <button class="remove-btn" data-remove="${key}" data-index="${index}">x</button>
@@ -371,6 +422,7 @@ function fieldSection(title, key, color, addLabel) {
         `).join("")}
         <div class="total-row"><span>Total ${title.toLowerCase()}</span><span style="color:${color}">${fmt(total)}</span></div>
         <button class="add-btn" data-add="${key}">+ ${addLabel}</button>
+        ${key === "saidas" ? `<button class="add-btn installment-add" id="add-installment">+ Adicionar saída parcelada</button>` : ""}
       </div>
     </section>
   `;
@@ -401,6 +453,8 @@ function bindFinanceInputs() {
       renderPage();
     });
   });
+  const installmentButton = document.querySelector("#add-installment");
+  if (installmentButton) installmentButton.addEventListener("click", addInstallment);
   document.querySelector("#meta-pct").addEventListener("input", (event) => {
     state.meta = Number(event.target.value || 0);
     queueSave();
@@ -408,6 +462,46 @@ function bindFinanceInputs() {
   document.querySelector("#meta-pct").addEventListener("change", () => {
     renderPage();
   });
+}
+
+function addInstallment() {
+  const label = prompt("Descrição da compra parcelada:");
+  if (!label?.trim()) return;
+  const total = Number(prompt("Valor total da compra (R$):")?.replace(",", "."));
+  if (!Number.isFinite(total) || total <= 0) return alert("Digite um valor total válido.");
+  const installments = Number(prompt("Quantidade de parcelas:", "2"));
+  if (!Number.isInteger(installments) || installments < 2 || installments > 120) {
+    return alert("Digite uma quantidade entre 2 e 120 parcelas.");
+  }
+
+  saveCurrentPeriod();
+  const monthlyValue = Number((total / installments).toFixed(2));
+  let year = Number(state.ano);
+  let month = state.mes;
+
+  for (let number = 1; number <= installments; number += 1) {
+    const key = `${year}-${String(month + 1).padStart(2, "0")}`;
+    const period = state.periodos[key] || { meta: 30, entradas: [], saidas: [], dividas: [] };
+    period.saidas = period.saidas || [];
+    period.saidas.push({
+      label: label.trim(),
+      value: number === installments ? Number((total - monthlyValue * (installments - 1)).toFixed(2)) : monthlyValue,
+      parcelada: true,
+      parcela: number,
+      parcelas: installments,
+      valorTotal: total
+    });
+    state.periodos[key] = period;
+    month += 1;
+    if (month > 11) {
+      month = 0;
+      year += 1;
+    }
+  }
+
+  loadCurrentPeriod();
+  queueSave();
+  renderPage();
 }
 
 function renderDividas(container) {
