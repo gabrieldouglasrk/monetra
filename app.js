@@ -164,8 +164,11 @@ async function emailLogin(event, createMode) {
     showLoginError("");
     submitButton.disabled = true;
     submitButton.textContent = createMode ? "Criando conta..." : "Entrando...";
-    if (createMode) await createUserWithEmailAndPassword(auth, email, password);
-    else await signInWithEmailAndPassword(auth, email, password);
+    const credential = createMode
+      ? await createUserWithEmailAndPassword(auth, email, password)
+      : await signInWithEmailAndPassword(auth, email, password);
+    user = credential.user;
+    renderApp();
   } catch (error) {
     console.error("Erro na autenticação por e-mail:", error);
     const messages = {
@@ -195,7 +198,9 @@ async function login() {
   try {
     button.disabled = true;
     button.innerHTML = "Conectando ao Google...";
-    await signInWithPopup(auth, provider);
+    const credential = await signInWithPopup(auth, provider);
+    user = credential.user;
+    renderApp();
   } catch (error) {
     console.error("Erro no login com Google:", error);
     alert(`Não foi possível entrar: ${error.code || error.message}`);
